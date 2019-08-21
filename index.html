@@ -4,6 +4,7 @@
 body{
 	margin:0 auto;
 	padding:20px;
+	overflow:hidden;
 	background-color:grey;
 }
 button{
@@ -47,12 +48,20 @@ button:hover{
 	bottom:0;
 	left:50%;
 	transform:translate(-50%);
+	background-color:rgba(0,255,0,0.5);
 }
 .stop{
 	position:fixed;
 	bottom:0;
 	right:20px;
 	width:80px;
+	background-color:rgba(255,0,0,0.5);
+}
+.srtTime{
+	position:fixed;
+	bottom:0;
+	left:20px;
+	width:120px;
 	background-color:rgba(0,255,0,0.5);
 }
 video{
@@ -71,6 +80,7 @@ video{
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.7/p5.min.js"></script>
 <script src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/1070/p5.dom.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@8"></script>
 </head>
 
 <body>
@@ -78,13 +88,12 @@ video{
 <button class="listen" onclick="listen()">Listen<br/>👂</button>
 <button class="export" onclick="writeSRT()">Export SRT<br/>💾</button>
 <button class="stop" onclick="stop()">Stop<br/>🚫</button>
-<!--Make sure to replace the source file with the name of yours -->
-<video id="myVideo" width="320" height="176" src="force.mp4" type="video/mp4" controls>
+<button class="srtTime" onclick="showSrtTime()" title="Show current video time in SRT format">SRT Time<br/>🕒</button>
+<video id="myVideo" width="320" height="176" controls src="https://bombtechinc.com/Jerry.mp4" type="video/mp4">	
   Your browser does not support HTML5 video.
 </video>
 
-<div id="output" title="SRT output. Double-click to edit"  ondblclick="this.contentEditable=true;this.className='inEdit';this.focus();" onblur="this.contentEditable=false;this.className='';" contenteditable="false" class=""></div>
-
+<div id="output" title="SRT output. Double-click to edit"  ondblclick="this.contentEditable=true;this.className='inEdit';this.focus()" onblur="this.contentEditable=false;this.className='';" contenteditable="false" class=""></div>
 <script>
 //Known issues. This works on a hosted video file. Doesn't want to cooperate with local file (keeps asking for microphone permission)
 
@@ -109,12 +118,40 @@ function setup() {
 	noCanvas();
 }
 
+          
+function copyToClipboard(text){
+    var dummy = document.createElement("input");
+    document.body.appendChild(dummy);
+    dummy.setAttribute('value', text);
+    dummy.select();
+    document.execCommand("copy");
+    document.body.removeChild(dummy);
+}
+
 //video stuff
 //*******************************
 var vid = document.getElementById("myVideo");
 
-function getCurTime() { 
-  alert(vid.currentTime);
+
+//shows the current time for the video
+function showSrtTime() {
+	var theTime = srtTime(vid.currentTime);
+	 Swal.fire({
+        title: theTime,
+        width: window.innerWidth / 1.2,
+        padding: "3em",
+        allowEnterKey: true,
+        showCancelButton: false,
+        allowEscapeKey: true,
+        allowOutsideClick: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Copy"
+      }).then(result => {
+		 		if (result.value) {
+					copyToClipboard(theTime);
+		 		}
+	 });
 }
 
 
