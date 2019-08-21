@@ -1,0 +1,248 @@
+<html>
+<head>
+<style>
+body{
+	margin:0 auto;
+	padding:20px;
+	background-color:grey;
+}
+button{
+	font-size:1.2em;
+	border-radius:10px;
+	border:0px;
+	padding:10px;
+	width:30%;
+	margin-bottom:20px;
+	cursor:pointer;
+	background-color:rgba(0,255,255,0.5);
+	font-weight:bold;
+	z-index:2;
+}
+button:hover{
+	opacity:0.75;
+}
+#output{
+	width:90%;
+	height:30%;
+	overflow-y:scroll;
+	background-color:#ccc;
+	position:absolute;
+	border-radius:20px;
+	left:50%;
+	transform:translate(-50%);
+	border:2px dashed #000;
+	padding:10px;
+	margin-bottom:105px;
+}
+.listen{
+	position:relative;
+	top:0;
+	left:50%;
+	transform:translate(-50%);
+	width:80%;
+}
+.export{
+	position:fixed;
+	bottom:0;
+	left:50%;
+	transform:translate(-50%);
+}
+.stop{
+	position:fixed;
+	bottom:0;
+	right:20px;
+	width:80px;
+	background-color:rgba(0,255,0,0.5);
+}
+video{
+	position:relative;
+	left:50%;
+	transform:translate(-50%);
+	margin-bottom:10px;
+}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.7/p5.min.js"></script>
+<script src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/1070/p5.dom.js"></script>
+</head>
+
+<body>
+
+<button class="listen" onclick="listen()">Listen<br/>👂</button>
+<button class="export" onclick="writeSRT()">Export SRT<br/>💾</button>
+<button class="stop" onclick="stop()">Stop<br/>🚫</button>
+<!--Make sure to replace the source file with the name of yours -->
+<video id="myVideo" width="320" height="176" src="force.mp4" type="video/mp4" controls>
+  Your browser does not support HTML5 video.
+</video>
+
+<div id="output" title="SRT output"></div>
+
+<script>
+//Known issues. This works on a hosted video file. Doesn't want to cooperate with local file (keeps asking for microphone permission)
+
+let stopped = false;
+let boxArray = [0, 1, 2];
+let speechToText;
+
+//Speech recognition stuff
+window.SpeechRecognition =
+	window.webkitSpeechRecognition || window.SpeechRecognition;
+if ("SpeechRecognition" in window) {
+	// speech recognition API supported
+	//alert("supported");
+} else {
+	// speech recognition API not supported
+	alert(
+		"Speech recognition not supported in this browser. Switch to Chrome or Firefox"
+	);
+}
+
+function setup() {
+	noCanvas();
+}
+
+//video stuff
+//*******************************
+var vid = document.getElementById("myVideo");
+
+function getCurTime() { 
+  alert(vid.currentTime);
+} 
+//*******************************
+
+var initialStart = 0;
+// plays or pauses the video depending on current state
+function listen() {
+	//start listening
+	console.log("Starting listening");
+
+	if (initialStart == 0){
+	vid.play();
+	}
+	initialStart++;
+	
+	let recognition = new window.SpeechRecognition();
+	
+	let theStart = "";
+	let theEnd = "";
+	
+	recognition.onaudiostart = function() {
+		theStart = srtTime(vid.currentTime);
+	}
+	recognition.onaudioend = function() {
+  	theEnd = srtTime(vid.currentTime);
+}
+	recognition.onresult = event => {
+		speechToText = event.results[0][0].transcript;
+		//var theEnd = vid.currentTime;
+		//write to the output
+		whatWasSaid(theStart,theEnd);
+	};
+
+	//start the recognition
+	recognition.start();
+
+	//when you no longer hear anything
+	recognition.onspeechend = function() {
+		//stop the current recognition
+		recognition.stop();
+
+		//rerun the listen function to keep this continuous
+		if (stopped == false){
+		listen();
+		}
+	};
+}
+var num = 1;
+
+//tell what's going on
+function whatWasSaid(start, end) {
+	if (speechToText != undefined)
+		document.getElementById("output").innerHTML += num + "<br/>" + start + " --> " + end + "<br/>" + speechToText + "<br/><br/>";
+		num++;
+}
+
+//write the SRT file
+function writeSRT() {
+	//var userTitle = document.getElementById("userTitle").value;
+	alert(vid.src);
+	//get the src url and grab the name from before the .mp4
+	var userTitle = vid.src.match(/(\w+)(\.mp4+)/)[0];
+	userTitle = userTitle.substring(0, userTitle.length - 4);
+
+	// Write SRT file
+	var writer = createWriter(userTitle + ".SRT");
+	// Begin SRT document
+	writer.print(document.getElementById("output").innerText);
+	/*
+	//Example
+	writer.print("1");
+	writer.print("00:02:16,612 --> 00:02:19,376");
+
+	writer.print("Senator, we're making");
+	writer.print("our final approach into Coruscant.");
+	writer.print("");
+
+	// for loop adding all panel divs that have been created and stored in "boxArray"
+	for (var i = 0; i < boxArray.length; i++) {
+		writer.print(boxArray[i]);
+	}
+	*/
+	// close the writer (downloads the SRT file)
+	writer.close();
+
+	// Added in the documentation to clear out the writer, but throws errors. Doesn't seem to be necessary anyway.
+	//writer.clear();
+}
+
+function stop(){
+	stopped = true;
+}
+
+//converts video time into srt time format
+function srtTime(theTime){
+	var t = theTime.toString();
+	//everything before the "."
+	var seconds = t.match(/\d+(?=[/\d]*\.)/)[0];
+	//first 3 digits after the "."
+	var milliseconds = t.match(/\.*(\d{3})/)[1];
+	//if we're under 10 seconds
+	if ((seconds * 1) < 10){
+		t = "00:00:0" + seconds + "," + milliseconds;
+		return t;
+		//if we're over 10 seconds and under 60
+	} else if ((seconds * 1) >= 10 && (seconds * 1) < 60 ){
+		t = "00:00:" + seconds + "," + milliseconds;
+		return t;
+		//if we're over 60 seconds
+	} else if ((seconds * 1) >= 60){
+		var m = (seconds/60).toString();
+		seconds = (seconds % 60);
+		if(seconds<10){
+			seconds = "0" + seconds;
+		}
+		var minutes = m.match(/\d+(?=[/\d]*\.)/)[0];
+		//if minutes is less than 10
+		if (minutes<10){
+			t = "00:0" + minutes + ":" + seconds + "," + milliseconds;
+			return t;
+			//if minutes is above 10 and less than 60
+		} else if (minutes >= 10 && minutes < 60){
+			t = "00:" + minutes + ":" + seconds + "," + milliseconds;
+			return t;
+			//if minutes is above 60
+		} else if (minutes > 60){
+			var h = (minutes/60).toString();
+			var hours = h.match(/\d+(?=[/\d]*\.)/)[0];
+			t = "0" + hours + ":" + minutes + ":" + seconds + "," + milliseconds;
+			return t;
+		}
+		
+	}
+	
+}
+</script>
+
+</body>
+
+</html>
