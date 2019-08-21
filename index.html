@@ -22,6 +22,7 @@ button:hover{
 	opacity:0.75;
 }
 #output{
+	transition:100ms;
 	width:90%;
 	height:30%;
 	overflow-y:scroll;
@@ -59,6 +60,13 @@ video{
 	left:50%;
 	transform:translate(-50%);
 	margin-bottom:10px;
+	box-shadow:2px 2px 12px #000;
+}
+#output.inEdit{
+	transition:100ms;
+	background-color:white;
+	border-radius:0px;
+	font-family:Arial;
 }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/0.5.7/p5.min.js"></script>
@@ -75,7 +83,7 @@ video{
   Your browser does not support HTML5 video.
 </video>
 
-<div id="output" title="SRT output"></div>
+<div id="output" title="SRT output. Double-click to edit"  ondblclick="this.contentEditable=true;this.className='inEdit';this.focus();" onblur="this.contentEditable=false;this.className='';" contenteditable="false" class=""></div>
 
 <script>
 //Known issues. This works on a hosted video file. Doesn't want to cooperate with local file (keeps asking for microphone permission)
@@ -107,7 +115,9 @@ var vid = document.getElementById("myVideo");
 
 function getCurTime() { 
   alert(vid.currentTime);
-} 
+}
+
+
 //*******************************
 
 var initialStart = 0;
